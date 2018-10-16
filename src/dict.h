@@ -44,41 +44,59 @@
 /* Unused arguments generate annoying warnings... */
 #define DICT_NOTUSED(V) ((void) V)
 
+/* 哈希表节点  */
 typedef struct dictEntry {
+	// key
     void *key;
+    // value
     union {
         void *val;
         uint64_t u64;
         int64_t s64;
         double d;
     } v;
+    // 指向下个哈希表的节点，形成链表
     struct dictEntry *next;
 } dictEntry;
 
+/* 类型特定函数 */
 typedef struct dictType {
+	// 计算哈希值的函数
     uint64_t (*hashFunction)(const void *key);
+    // 复制键的函数
     void *(*keyDup)(void *privdata, const void *key);
+    // 复制值的函数
     void *(*valDup)(void *privdata, const void *obj);
+    // 对比键的函数
     int (*keyCompare)(void *privdata, const void *key1, const void *key2);
+    // 销毁键的函数
     void (*keyDestructor)(void *privdata, void *key);
+    // 销毁值的函数
     void (*valDestructor)(void *privdata, void *obj);
 } dictType;
 
-/* This is our hash table structure. Every dictionary has two of this as we
- * implement incremental rehashing, for the old to the new table. */
+/* 哈希表结构。每个字典都有两个这样的例子，我们实现了增量式的重放，旧的到新表。 */
 typedef struct dictht {
+	// 哈希表数组
     dictEntry **table;
+    // 哈希表大小
     unsigned long size;
+    // 哈希表大小掩码，用于计算索引，总是等于 size-1
     unsigned long sizemask;
+    // 该哈希表已有节点数量
     unsigned long used;
 } dictht;
 
+/**
+ * 字典结构体
+ */
 typedef struct dict {
     dictType *type;
     void *privdata;
+    // 两个哈希表 ht[0], ht[1]
     dictht ht[2];
-    long rehashidx; /* rehashing not in progress if rehashidx == -1 */
-    unsigned long iterators; /* number of iterators currently running */
+    long rehashidx; /* rehash 没有执行的时候 rehashdx = -1*/
+    unsigned long iterators; /* 目前正在运行的迭代器的数量  */
 } dict;
 
 /* If safe is set to 1 this is a safe iterator, that means, you can call
@@ -148,17 +166,22 @@ typedef void (dictScanBucketFunction)(void *privdata, dictEntry **bucketref);
 #define dictIsRehashing(d) ((d)->rehashidx != -1)
 
 /* API */
+// 创建一个新的字典。 O(1)
 dict *dictCreate(dictType *type, void *privDataPtr);
 int dictExpand(dict *d, unsigned long size);
+// 将给定的键值对添加到字典里面。
 int dictAdd(dict *d, void *key, void *val);
 dictEntry *dictAddRaw(dict *d, void *key, dictEntry **existing);
 dictEntry *dictAddOrFind(dict *d, void *key);
+// 将给定的键值对添加到字典里面，如果键已经存在于字典中，那么用新的值取代原有的值。 O(1)
 int dictReplace(dict *d, void *key, void *val);
+// 从字典里面删除给定键所对应的键值对。 O(1)
 int dictDelete(dict *d, const void *key);
 dictEntry *dictUnlink(dict *ht, const void *key);
 void dictFreeUnlinkedEntry(dict *d, dictEntry *he);
 void dictRelease(dict *d);
 dictEntry * dictFind(dict *d, const void *key);
+// 返回给定的值。 O(1)
 void *dictFetchValue(dict *d, const void *key);
 int dictResize(dict *d);
 dictIterator *dictGetIterator(dict *d);
